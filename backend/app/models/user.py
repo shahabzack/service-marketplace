@@ -12,6 +12,7 @@ from enum import Enum as PyEnum
 class UserRole(str, PyEnum):
     CUSTOMER = "customer"
     PROVIDER = "provider"
+    ADMIN    = "admin"
 
 class User(Base):
     __tablename__ = "users"
@@ -39,8 +40,12 @@ class User(Base):
     String(255),
     nullable=False,
 )
-    role: Mapped[str] = mapped_column(
-    Enum(UserRole, name="user_role"),
+    role: Mapped[UserRole] = mapped_column(
+        Enum(
+            UserRole,
+            name="user_role",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
     nullable=False,
     default=UserRole.CUSTOMER,
 )

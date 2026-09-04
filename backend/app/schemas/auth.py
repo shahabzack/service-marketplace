@@ -30,6 +30,7 @@ class UserResponse(BaseModel):
     phone: str
     role: str
     is_active: bool
+    provider_status: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

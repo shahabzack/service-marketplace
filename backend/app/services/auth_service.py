@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models.user import User
+from app.models.user import User,UserRole
 from app.schemas.auth import RegisterRequest,LoginRequest
 from app.core.security import hash_password,create_access_token,verify_password
 
