@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/auth_models.dart';
 import '../services/auth_service.dart';
 import '../services/token_storage.dart';
 
@@ -21,12 +22,14 @@ class AuthState {
   final bool isAuthenticated;
   final String? accessToken;
   final String? errorMessage;
+  final UserModel? user;
 
   const AuthState({
     this.isLoading = false,
     this.isAuthenticated = false,
     this.accessToken,
     this.errorMessage,
+    this.user,
   });
 
   AuthState copyWith({
@@ -34,8 +37,10 @@ class AuthState {
     bool? isAuthenticated,
     String? accessToken,
     String? errorMessage,
+    UserModel? user,
     bool clearErrorMessage = false,
     bool clearAccessToken = false,
+    bool clearUser = false,
   }) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
@@ -44,6 +49,7 @@ class AuthState {
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
+      user: clearUser ? null : user ?? this.user,
     );
   }
 }
@@ -62,7 +68,7 @@ class AuthNotifier extends Notifier<AuthState> {
     final tokenStorage = ref.read(tokenStorageProvider);
     final authService = ref.read(authServiceProvider);
 
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
 
     try {
       final token = await tokenStorage.getAccessToken();
@@ -72,9 +78,9 @@ class AuthNotifier extends Notifier<AuthState> {
         return;
       }
 
-      await authService.verifyToken(token);
+      final user = await authService.getCurrentUser(token);
 
-      state = AuthState(isAuthenticated: true, accessToken: token);
+      state = AuthState(isAuthenticated: true, accessToken: token, user: user);
     } catch (e) {
       await tokenStorage.deleteAccessToken();
 
@@ -83,7 +89,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> login({required String email, required String password}) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
 
     try {
       final authService = ref.read(authServiceProvider);
@@ -96,9 +102,12 @@ class AuthNotifier extends Notifier<AuthState> {
 
       await tokenStorage.saveAccessToken(response.accessToken);
 
+      final user = await authService.getCurrentUser(response.accessToken);
+
       state = AuthState(
         isAuthenticated: true,
         accessToken: response.accessToken,
+        user: user,
       );
     } on DioException catch (e) {
       String message = 'Unable to login. Please try again.';
@@ -115,7 +124,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
       state = AuthState(errorMessage: message);
     } catch (e) {
-      state = AuthState(
+      state = const AuthState(
         errorMessage: 'Something went wrong. Please try again.',
       );
     }

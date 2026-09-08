@@ -13,16 +13,18 @@ class AuthService {
   }) async {
     final response = await _dio.post(
       ApiConstants.login,
-      data: {'email': email, 'password': password},
+      data: {'email': email.trim().toLowerCase(), 'password': password},
     );
 
     return LoginResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> verifyToken(String token) async {
-    await _dio.get(
+  Future<UserModel> getCurrentUser(String accessToken) async {
+    final response = await _dio.get(
       ApiConstants.me,
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
+
+    return UserModel.fromJson(response.data as Map<String, dynamic>);
   }
 }

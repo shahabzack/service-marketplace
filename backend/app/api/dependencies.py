@@ -6,6 +6,10 @@ from app.db.session import get_db
 from app.models.user import User, UserRole
 from collections.abc import Callable
 from app.core.security import verify_access_token
+from app.models.provider_application import (
+    ProviderApplication,
+    ProviderApplicationStatus,
+)
 
 
 
@@ -70,3 +74,32 @@ def require_role(required_role: UserRole) -> Callable:
         return current_user
 
     return role_checker
+
+def require_approved_provider(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    if current_user.role == UserRole.ADMIN:
+        return current_user
+
+    application = (
+        db.query(ProviderApplication)
+        .filter(
+            ProviderApplication.user_id == current_user.id
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Provider approval required",
+        )
+
+    if application.status != ProviderApplicationStatus.APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Provider approval required",
+        )
+
+    return current_user
